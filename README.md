@@ -2,7 +2,10 @@
 Python script to machine remote control
 
 ## About
-Very simple script to control personal machine with Twitter account.
+Script to control you PC from panel. Working on Python 2/3 by using urllib/2/3
+
+## Panel
+I don\`t upload panel here but if u want, I can do this. 
 
 ## Function
 `d&e` - Download & Execute
