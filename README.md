@@ -9,10 +9,15 @@ I don\`t upload panel here but if u want, I can do this.
 
 ## Config
 `_scheme` - http(-s) C&C protocol. I recomended http to false start alerting.
+
 `_host` - you domain
+
 `_gate` - path to gate.php
+
 `_sleep` - sleep before receive command from C&C
+
 `_save` - dir to save without slash in end. '/tmp' - for save in temporary dir and '.' - to save in script dir
+
 `_ext` - list of ext what need add to name if it is in link
 
 ## Commands from panel
