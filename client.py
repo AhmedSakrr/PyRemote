@@ -1,7 +1,6 @@
 from os import system
 from time import sleep
 from random import randint
-from sys import version_info
 
 _ver = 0
 
@@ -18,21 +17,21 @@ try:
     _ver = 2
 except:
     try:
-        if version_info.major == 3:
-            from urllib3 import PoolManager, request
-            _ver = 3
-        else:
+        from urllib3 import PoolManager, request
+        _ver = 3
+    except:
+        try:
             from urllib.request import urlretrieve as urlopen
             _ver = 1
-    except:
-        import socket
+        except:
+            import socket
 
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((_host, 80))
-        s.send(bytes("GET /false.php HTTP/1.1\nHost: {0}\n\n".format(_host), 'utf8'))
-        s.close()
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((_host, 80))
+            s.send(bytes("GET /false.php HTTP/1.1\nHost: {0}\n\n".format(_host), 'utf8'))
+            s.close()
 
-        exit()
+            exit()
 
 def _ext_check(link):
     lnk = link.split('.')
